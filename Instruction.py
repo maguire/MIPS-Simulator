@@ -1,0 +1,3 @@
+
+class Instruction(object):
+    pass
