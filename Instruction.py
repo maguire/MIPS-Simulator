@@ -28,7 +28,11 @@ class Instruction(object):
                        'immed': None,
                        'target': None
         }
-        
+        self.actions = { 'regRead' : None,
+                         'regWrite': None,
+                         'readMem' : None,
+                         'writeMem': None,
+
         for key in input:
             self.values[key] = input[key]
         
