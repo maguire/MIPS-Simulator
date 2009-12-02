@@ -4,8 +4,8 @@ import os
 class PipelineSimulator(object):
      
     operations = {'add' : '+', 'addi' : '+', 'sub' : '-', 'subi' : '-', 
-                  'and' : '&', 'andi' : '&', 'or'  : '|', 'ori'  : '|', 
-                  'nor' : '~|', 'slt' : '<'}
+                  'and' : '&', 'andi' : '&', 'or'  : '|', 'ori'  : '|'} 
+                  
     def __init__(self,instrCollection):
         #self.pipeline is a list<PipelineInstr>
         #with the mapping of:
@@ -16,7 +16,7 @@ class PipelineSimulator(object):
         #   4 = Data Access
         self.pipeline = []
         # ex: {'r0' : 0, 'r1' : 0 ... 'r31' : 0 }
-        self.registers = dict([("r%s" % x, 0) for x in range(32)]) 
+        self.registers = dict([("$r%s" % x, 0) for x in range(32)]) 
         
         #set up the main memory construct, a list index starting at 0
         # and continuing to 0xffc
@@ -58,7 +58,12 @@ class PipelineSimulator(object):
         self.programCounter += 1
     def run(self):
         pass
-
+    def debug(self):
+        print("ProgramCounter: ", self.programCounter)
+        print("Registers: ", self.registers)
+        print("Registers: ", self.registers)
+        print("MainMemory: ", self.mainmemory)
+        print("Pipeline: ", self.pipeline)
 class PipelineInstr(object):
     
     def __init__(self, instruction, simulator):
@@ -82,11 +87,10 @@ class ReadInstr(PipelineInstr):
         Read the necessary registers from the registers file
         used in this instruction 
         """
-        if(self.instruction.regRead):
+        if(self.instruction.controls.regRead):
             self.simulator.source1RegValue = self.simulator.registers[self.instruction.values.rt]
-        if self.instruction.values.rd is None
-            self.simulator.source2RegValue = 
-                    self.simulator.registers[self.instruction.values.rd]
+        if self.instruction.values.rd is None:
+            self.simulator.source2RegValue = self.simulator.registers[self.instruction.values.rd]
 
 class ExecInstr(PipelineInstr):
     
@@ -96,9 +100,14 @@ class ExecInstr(PipelineInstr):
         assembly operation to python operation
         """
         #TODO add special cases instead of just an eval 
-        self.simulator.result = eval("%d %s %d" % 
+        if (self.instruction.values.op == 'slt') :
+            self.simulator.result = 1 if self.simluator.source1RegValue < self.simulator.source2RegValue else 0
+        elif (self.instruction.values.op == 'nor') :
+            self.simulator.result = ~(self.simulator.source1RegValue | self.simulator.source2RegValue)
+        else :
+            self.simulator.result = eval("%d %s %d" % 
                                         (self.simulator.source1RegValue,
-                                         PipelineSimulator.operations[self.instruction.vales.op],
+                                         PipelineSimulator.operations[self.instruction.values.op],
                                          self.simulator.source2RegValue))
 
 class DataInstr(PipelineInstr):
@@ -108,15 +117,15 @@ class DataInstr(PipelineInstr):
         and then read from main memory second
         """
  
-        if self.instruction.writeMem :
+        if self.instruction.controls.writeMem :
             self.simulator.mainmemory[int(self.instruction.values.rt)] = self.simulator.source1RegValue
         else:
-            if self.instruction.readMem :
+            if self.instruction.controls.readMem :
                 self.simulator.source1RegValue = self.simulator.main[int(self.instruction.values.rs)]
 class WriteInstr(PipelineInstr):
     def advance(self):
         """
         Write to the register file
         """
-        if self.instruction.regWrite :
+        if self.instruction.controls.regWrite :
             self.simulator.registers[self.instruction.rs] = self.simulator.result

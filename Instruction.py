@@ -28,10 +28,10 @@ class Instruction(object):
                        'immed': None,
                        'target': None
         }
-        self.actions = { 'regRead' : None,
+        self.controls = {'regRead' : None,
                          'regWrite': None,
                          'readMem' : None,
-                         'writeMem': None,
+                         'writeMem': None, }
 
         for key in input:
             self.values[key] = input[key]
