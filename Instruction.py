@@ -34,8 +34,11 @@ class Instruction(object):
                          'writeMem': None, }
 
         for key in input:
-            self.values[key] = input[key]
-        
+            if key in self.values.keys():
+                self.values[key] = input[key]
+            else :
+                self.controls[key] = input[key]
+    
     def __str__(self):
         return repr(self.values)
         
@@ -50,7 +53,7 @@ class InstructionParser(object):
     def parseFile(self, filename):
         with open(filename) as f:
             data = f.readlines()
-            instructions = [self.parse(a.replace(',','')) for a in data]
+            instructions = [self.parse(a.replace(',',' ')) for a in data]
             return instructions
 
     def parse(self, s):
@@ -62,16 +65,16 @@ class InstructionParser(object):
             return self.createRTypeInstruction(s)
         elif instr in self.instructionSet['itype']:
             return self.createITypeInstruction(s)    
-        elif instr in self.instructionset['jtype']:
+        elif instr in self.instructionSet['jtype']:
             return self.createJTypeInstruction(s)
         else:
             raise ParseError("Invalid parse instruction")
 
     def createRTypeInstruction(self, s):
-        return Instruction(op=s[0], rd=s[1], rs=s[2], rt=s[3])
+        return Instruction(op=s[0], rd=s[1], rs=s[2], rt=s[3], regRead = 1, regWrite =1)
 
     def createITypeInstruction(self, s):
-        return Instruction(op=s[0], rs=s[1], rt=s[2], immed=s[3])
+        return Instruction(op=s[0], rs=s[1], rt=s[2], immed=s[3], regRead=1, regWrite=1)
 
     def createJTypeInstruction(self, s):
         return Instruction(op=s[0], target=s[1])
