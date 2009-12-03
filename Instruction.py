@@ -89,7 +89,7 @@ class InstructionParser(object):
     def createITypeInstruction(self, s):
         memread = s[0] == "lw" 
         memwrite = s[0] == "sw"
-        aluopbit = not (s[0] == "lw" and s[0] == "sw")
+        aluopbit = not (s[0] == "lw" or s[0] == "sw")
         return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1, aluop=aluopbit, writeMem=memwrite, readMem=memread)
 
     def createJTypeInstruction(self, s):
