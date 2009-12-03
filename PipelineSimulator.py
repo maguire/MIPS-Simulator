@@ -6,6 +6,7 @@ class PipelineSimulator(object):
                   'and' : '&', 'andi' : '&', 'or'  : '|', 'ori'  : '|'} 
                   
     def __init__(self,instrCollection):
+        self._done = False
         #self.pipeline is a list<PipelineInstr>
         #with the mapping of:
         #   0 = Fetch
@@ -13,7 +14,13 @@ class PipelineSimulator(object):
         #   2 = Read
         #   3 = Execute 
         #   4 = Data Access
-        self.pipeline = [PipelineInstr(None, self) for x in range(0,5)]
+        self.pipeline = [None for x in range(0,5)]
+
+        self.pipeline[0] = FetchInstr(Instruction.Nop, self)
+        self.pipeline[1] = WriteInstr(Instruction.Nop, self)
+        self.pipeline[2] = ReadInstr(Instruction.Nop, self)
+        self.pipeline[3] = ExecInstr(Instruction.Nop, self)
+        self.pipeline[4] = DataInstr(Instruction.Nop, self)
         # ex: {'r0' : 0, 'r1' : 0 ... 'r31' : 0 }
         self.registers = dict([("$r%s" % x, 0) for x in range(32)]) 
         
@@ -40,33 +47,49 @@ class PipelineSimulator(object):
                 y += 1
             else: 
                 break
-    def setRegister(self, reg, val):
-        self.registers[reg] = val
 
     def step(self):
         #call advance on each instruction in the pipeline
         #TODO implement harzard control
-            
         for pi in self.pipeline:
-            if pi.instr is not None :
                 pi.advance()
         
         #shift the instructions to the next logical place
         #technically we do the Fetch instruction here, which is why 
         #FetchInstr.advance() does nothing
         
+
+        #MUST KEEP THIS ORDER
+        self.pipeline[1] = WriteInstr(self.pipeline[4].instr,self)
+        self.pipeline[4] = DataInstr(self.pipeline[3].instr,self)
+        self.pipeline[3] = ExecInstr(self.pipeline[2].instr,self)
+        self.pipeline[2] = ReadInstr(self.pipeline[0].instr,self)
+        
         if self.programCounter < len(self.instrCollection) :
             self.pipeline[0] = FetchInstr(self.instrCollection[self.programCounter],self)
-        self.pipeline[1] = WriteInstr(self.pipeline[4].instr,self)
-        self.pipeline[2] = ReadInstr(self.pipeline[0].instr,self)
-        self.pipeline[3] = ExecInstr(self.pipeline[2].instr,self)
-        self.pipeline[4] = DataInstr(self.pipeline[3].instr,self)
+        else:    
+            self.pipeline[0] = FetchInstr(Instruction.Nop, self)
+       
+        self.checkDone()
+
         #TODO do not always update program counter, actually we should find a good way
         # to exit the program
         self.programCounter += 1
+    
+    def checkDone(self):
+        self._done = True
+        for pi in self.pipeline:
+            if pi.instr is not Instruction.Nop:
+                self._done = False
+    
     def run(self):
-        pass
+        #how the fuck do we decide when its done?
+        while not self._done :
+            self.step()
+            self.debug()
+    
     def debug(self):
+        print("InstrCollection: ", self.instrCollection)
         print("ProgramCounter: ", self.programCounter)
         print("Registers: ", self.registers)
         print("MainMemory: ", self.mainmemory)
@@ -76,10 +99,10 @@ class PipelineInstr(object):
     def __init__(self, instruction, simulator):
         self.instr = instruction
         self.simulator = simulator
-    
     def advance(self):
         pass
-
+    def __repr__(self):
+        return str(self) + ': ' + str(self.instr)
 class FetchInstr(PipelineInstr):
     
     def advance(self):
@@ -87,6 +110,8 @@ class FetchInstr(PipelineInstr):
         Pretty Much does nothing in our simulator.
         """
         pass
+    def __str__(self):
+        return 'Fetch'
 class ReadInstr(PipelineInstr):
     
     def advance(self):
@@ -95,12 +120,14 @@ class ReadInstr(PipelineInstr):
         used in this instruction 
         """
         if(self.instr.controls['regRead']):
-            self.simulator.source1RegValue = self.simulator.registers[self.instr.values['rt']]
+            self.simulator.source1RegValue = self.simulator.registers[self.instr.values['s1']]
             if self.instr.values['immed'] is not None:
                 self.simulator.source2RegValue = int(self.instr.values['immed'])
-            if self.instr.values['rd'] is not None:
-                self.simulator.source2RegValue = self.simulator.registers[self.instr.values['rd']]
-
+            if self.instr.values['s2'] is not None:
+                self.simulator.source2RegValue = self.simulator.registers[self.instr.values['s2']]
+        print self.simulator.source1RegValue
+    def __str__(self):
+        return 'Read'
 class ExecInstr(PipelineInstr):
     
     def advance(self):
@@ -108,17 +135,20 @@ class ExecInstr(PipelineInstr):
         Execute the instruction according to its mapping of 
         assembly operation to python operation
         """
-        #TODO add special cases instead of just an eval (branch jump) 
-        if (self.instr.values['op'] == 'slt') :
-            self.simulator.result = 1 if self.simluator.source1RegValue < self.simulator.source2RegValue else 0
-        elif (self.instr.values['op'] == 'nor') :
-            self.simulator.result = ~(self.simulator.source1RegValue | self.simulator.source2RegValue)
-        else :
-            self.simulator.result = eval("%d %s %d" % 
-                                        (self.simulator.source1RegValue,
-                                         PipelineSimulator.operations[self.instr.values['op']],
-                                         self.simulator.source2RegValue))
+        #TODO add special cases instead of just an eval (branch jump)
+        if self.instr is not Instruction.Nop:
+            if (self.instr.values['op'] == 'slt') :
+                self.simulator.result = 1 if self.simulator.source1RegValue < self.simulator.source2RegValue else 0
+            elif (self.instr.values['op'] == 'nor') :
+                self.simulator.result = ~(self.simulator.source1RegValue | self.simulator.source2RegValue)
+            else :
+                self.simulator.result = eval("%d %s %d" % 
+                                            (self.simulator.source1RegValue,
+                                             PipelineSimulator.operations[self.instr.values['op']],
+                                             self.simulator.source2RegValue))
 
+    def __str__(self):
+        return 'Execute'
 class DataInstr(PipelineInstr):
    def advance(self):
         """
@@ -127,15 +157,21 @@ class DataInstr(PipelineInstr):
         """
  
         if self.instr.controls['writeMem'] :
-            self.simulator.mainmemory[int(self.instr.values['rt'])] = self.simulator.source1RegValue
+            self.simulator.mainmemory[int(self.instr.values['s2'])] = self.simulator.source1RegValue
         else:
             if self.instr.controls['readMem'] :
-                self.simulator.source1RegValue = self.simulator.main[int(self.instr.values['rs'])]
+                self.simulator.source1RegValue = self.simulator.main[int(self.instr.values['s2'])]
+   def __str__(self):
+        return 'Memory'
 class WriteInstr(PipelineInstr):
     def advance(self):
         """
         Write to the register file
         """
-        print self.simulator.result
         if self.instr.controls['regWrite'] :
-            self.simulator.registers[self.instr.values['rs']] = self.simulator.result
+            if self.instr.values['dest'] == '$r0':
+                raise Exception('Cannot assign to register $r0')    
+            else:
+                self.simulator.registers[self.instr.values['dest']] = self.simulator.result
+    def __str__(self):
+        return 'Write'

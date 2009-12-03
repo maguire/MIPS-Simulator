@@ -22,9 +22,9 @@ class Instruction(object):
     def __init__(self, **input):
         self.values = {
                        'op': None,
-                       'rs': None,
-                       'rt': None,
-                       'rd': None,
+                       'dest': None,
+                       's1': None,
+                       's2': None,
                        'immed': None,
                        'target': None
         }
@@ -41,7 +41,14 @@ class Instruction(object):
     
     def __str__(self):
         return repr(self.values)
+    def __repr__(self):
+        return repr(self.values)
         
+class Nop(Instruction):
+    pass
+
+Nop = Nop()
+
 class InstructionParser(object):
     def __init__(self):
         self.instructionSet = {
@@ -70,11 +77,12 @@ class InstructionParser(object):
         else:
             raise ParseError("Invalid parse instruction")
 
+    #TODO should be figuring out controls dynamically based on the op
     def createRTypeInstruction(self, s):
-        return Instruction(op=s[0], rd=s[1], rs=s[2], rt=s[3], regRead = 1, regWrite =1)
+        return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead = 1, regWrite =1)
 
     def createITypeInstruction(self, s):
-        return Instruction(op=s[0], rs=s[1], rt=s[2], immed=s[3], regRead=1, regWrite=1)
+        return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1)
 
     def createJTypeInstruction(self, s):
         return Instruction(op=s[0], target=s[1])
