@@ -28,7 +28,8 @@ class Instruction(object):
                        'immed': None,
                        'target': None
         }
-        self.controls = {'regRead' : None,
+        self.controls = {'aluop'   : None,
+                         'regRead' : None,
                          'regWrite': None,
                          'readMem' : None,
                          'writeMem': None, }
@@ -40,13 +41,17 @@ class Instruction(object):
                 self.controls[key] = input[key]
     
     def __str__(self):
-        return repr(self.values)
+        str = "%s\t%s, %s, %s" % (self.values['op'],
+                                  self.values['dest'],
+                                  self.values['s1'],
+                                  self.values['s2'] if self.values['s2'] else self.values['immed'])
+        return str
     def __repr__(self):
         return repr(self.values)
         
 class Nop(Instruction):
     pass
-
+#nop singleton
 Nop = Nop()
 
 class InstructionParser(object):
@@ -79,10 +84,13 @@ class InstructionParser(object):
 
     #TODO should be figuring out controls dynamically based on the op
     def createRTypeInstruction(self, s):
-        return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead = 1, regWrite =1)
+        return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead = 1, regWrite = 1, aluop = 1)
 
     def createITypeInstruction(self, s):
-        return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1)
+        memread = s[0] == "lw" 
+        memwrite = s[0] == "sw"
+        aluopbit = not (s[0] == "lw" and s[0] == "sw")
+        return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1, aluop=aluopbit, writeMem=memwrite, readMem=memread)
 
     def createJTypeInstruction(self, s):
         return Instruction(op=s[0], target=s[1])
