@@ -61,11 +61,7 @@ class PipelineSimulator(object):
         self.pipeline[4] = DataInstr(self.pipeline[3].instr,self)
         self.pipeline[3] = ExecInstr(self.pipeline[2].instr,self)
         self.pipeline[2] = ReadInstr(self.pipeline[0].instr,self)
-        
-        if self.programCounter < len(self.instrCollection) :
-            self.pipeline[0] = FetchInstr(self.instrCollection[self.programCounter],self)
-        else:    
-            self.pipeline[0] = FetchInstr(Instruction.Nop, self)
+        self.pipeline[0] = FetchInstr(None, self) 
         #call advance on each instruction in the pipeline
         #TODO implement harzard control
         for pi in self.pipeline:
@@ -133,8 +129,12 @@ class FetchInstr(PipelineInstr):
     
     def advance(self):
         """ 
-        Pretty Much does nothing in our simulator.
+        Fetch the next instruction according to simulator prog counter
         """
+        if self.simulator.programCounter < len(self.simulator.instrCollection) :
+            self.instr = self.simulator.instrCollection[self.simulator.programCounter]
+        else:    
+            self.instr = Instruction.Nop
         pass
     def __str__(self):
         return 'Fetch'
