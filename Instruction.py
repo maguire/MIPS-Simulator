@@ -20,6 +20,7 @@ func - function
 
 class Instruction(object):
     def __init__(self, **input):
+        self.result = None
         self.values = {
                        'op': None,
                        'dest': None,
@@ -37,8 +38,64 @@ class Instruction(object):
         for key in input:
             if key in self.values.keys():
                 self.values[key] = input[key]
-            else :
+            else:
                 self.controls[key] = input[key]
+    
+    @property
+    def op(self):
+        """ Get this Instruction's name """
+        return self.values['op']
+    
+    @property
+    def dest(self):
+        """ Get this Instruction's name """
+        return self.values['dest']
+    
+    @property
+    def s1(self):
+        """ Get this Instruction's name """
+        return self.values['s1']
+    
+    @property
+    def s2(self):
+        """ Get this Instruction's name """
+        return self.values['s2']
+    
+    @property
+    def immed(self):
+        """ Get this Instruction's name """
+        return self.values['immed']
+    
+    @property
+    def target(self):
+        """ Get this Instruction's name """
+        return self.values['target']
+    
+    @property
+    def aluop(self):
+        """ Get this Instruction's name """
+        return self.controls['aluop']
+    
+    @property
+    def regRead(self):
+        """ Get this Instruction's name """
+        return self.controls['regRead']
+    
+    @property
+    def regWrite(self):
+        """ Get this Instruction's name """
+        return self.controls['regWrite']
+    
+    @property
+    def readMem(self):
+        """ Get this Instruction's name """
+        return self.controls['readMem']
+    
+    @property
+    def writeMem(self):
+        """ Get this Instruction's name """
+        return self.controls['writeMem']
+    
     
     def __str__(self):
         str = "%s\t%s, %s, %s" % (self.values['op'],
@@ -46,6 +103,7 @@ class Instruction(object):
                                   self.values['s1'],
                                   self.values['s2'] if self.values['s2'] else self.values['immed'])
         return str
+    
     def __repr__(self):
         return repr(self.values)
         
@@ -64,7 +122,8 @@ class InstructionParser(object):
 
     def parseFile(self, filename):
         with open(filename) as f:
-            data = f.readlines()
+            data = filter((lambda x: x != '\n'), f.readlines())
+            
             instructions = [self.parse(a.replace(',',' ')) for a in data]
             return instructions
 
@@ -84,12 +143,12 @@ class InstructionParser(object):
 
     #TODO should be figuring out controls dynamically based on the op
     def createRTypeInstruction(self, s):
-        return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead = 1, regWrite = 1, aluop = 1)
+        return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead=1, regWrite=1, aluop=1)
 
     def createITypeInstruction(self, s):
         memread = s[0] == "lw" 
         memwrite = s[0] == "sw"
-        aluopbit = not (s[0] == "lw" or s[0] == "sw")
+        aluopbit = not (memread or memwrite)
         return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1, aluop=aluopbit, writeMem=memwrite, readMem=memread)
 
     def createJTypeInstruction(self, s):
