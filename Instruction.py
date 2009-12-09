@@ -21,6 +21,9 @@ func - function
 class Instruction(object):
     def __init__(self, **input):
         self.result = None
+        
+        self.source1RegValue = None 
+        self.source2RegValue = None
         self.values = {
                        'op': None,
                        'dest': None,
@@ -143,13 +146,28 @@ class InstructionParser(object):
 
     #TODO should be figuring out controls dynamically based on the op
     def createRTypeInstruction(self, s):
+        if s[0] == "jr":
+            return Instruction(op=s[0], s1 = s[1], regRead = 1, aluop=1)
         return Instruction(op=s[0], dest=s[1], s1=s[2], s2=s[3], regRead=1, regWrite=1, aluop=1)
 
     def createITypeInstruction(self, s):
         memread = s[0] == "lw" 
         memwrite = s[0] == "sw"
-        aluopbit = not (memread or memwrite)
-        return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1, aluop=aluopbit, writeMem=memwrite, readMem=memread)
+        if (memread or memwrite):
+            import re 
+            regex = re.compile("(\d+)\((\$r\d+)\)")
+            match = regex.match(s[2])
+            
+            immedval = match.group(1) 
+            sval = match.group(2)
+            if s[0] == "lw" :
+                return Instruction(op=s[0], dest = s[1], s1=sval, immed = immedval, regRead = 1,regWrite = 1, aluop=1,  readMem = 1)
+            else :
+                return Instruction(op=s[0],  s1 = s[1], s2=sval,immed = immedval, regRead = 1, aluop=1, writeMem = 1)
+
+        if ( s[0] == 'bne' or s[0] == 'beq') :
+            return Instruction(op=s[0], s1=s[1] , s2= s[2], immed = s[3], regRead = 1, aluop = 1)
+        return Instruction(op=s[0], dest=s[1], s1=s[2], immed=s[3], regRead=1, regWrite=1, aluop=1)
 
     def createJTypeInstruction(self, s):
         return Instruction(op=s[0], target=s[1])
