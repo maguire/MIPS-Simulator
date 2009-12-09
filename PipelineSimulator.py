@@ -68,33 +68,38 @@ class PipelineSimulator(object):
             self.pipeline[0] = FetchStage(None, self)
          
         #call advance on each instruction in the pipeline
-        #TODO implement hazard control
         for pi in self.pipeline:
                 pi.advance()
-       
+        #now that everything is done, remove the register from
+        # the hazard list
         if (self.pipeline[1].instr.regWrite) :
             self.hazardList.pop(0)
         
         self.checkDone()
 
-        #TODO do not always update program counter, actually we should find a good way
-        # to exit the program
+        #if we stalled our branched we didn't want to load a new
+        # so keep the program counter where it is
         if self.stall or self.branched:
             self.programCounter -= 4 
             self.branched = False
     
     def checkDone(self):
+        """ Check if we are done and set __done variable """
         self.__done = True
         for pi in self.pipeline:
             if pi.instr is not Nop:
                 self.__done = False
     
     def run(self):
+        """ Run the simulator, call step until we are done """
         while not self.__done:
             self.step()
             self.debug()
     
     def getForwardVal(self, regName):
+        """ Forward the proper value based on the given register name
+            If the value is not ready, return "GAH" 
+        """
         if (self.pipeline[4] is not Nop 
                 and self.pipeline[4].instr.result is not None
                 and self.pipeline[4].instr.dest == regName) :
@@ -102,17 +107,19 @@ class PipelineSimulator(object):
         elif (self.pipeline[1] is not Nop
                 and self.pipeline[1].instr.dest == regName ):
                     return self.pipeline[1].instr.result
-        else :
+        else :#this value used to be False, but python treats False and 0 the same
             return "GAH" 
-    
+
+    ### DEBUGGING INFORMATION PRINTING ### 
     def debug(self):
         print "######################## debug ###########################"
         self.printStageCollection() 
         self.printRegFile()
         print "\n<ProgramCounter>", self.programCounter
         self.printPipeline()   
-        print "CPI : " , float(self.cycles) / float(self.instrCount) 
-        print "Hazard List : " , self.hazardList 
+        print "<CPI> : " , float(self.cycles) / float(self.instrCount) 
+        print "<Hazard List> : " , self.hazardList
+
     def printPipeline(self):
         print "\n<Pipeline>"
         print repr(self.pipeline[0]) 
@@ -171,7 +178,11 @@ class ReadStage(PipelineStage):
         
         if(self.instr.regRead):
             self.instr.source1RegValue = self.simulator.registers[self.instr.s1]
-            if self.instr.immed and not( self.instr.op == 'bne' or self.instr.op == 'beq' or self.instr.op =='lw' or self.instr.op =='sw'):
+            if (self.instr.immed and
+                #these instructions require special treatment
+                 not( self.instr.op == 'bne' or self.instr.op == 'beq' 
+                     or self.instr.op =='lw' or self.instr.op =='sw')): 
+                #check to see if it is a hex value
                 if "0x" in self.instr.immed:
                     self.instr.source2RegValue = int(self.instr.immed,16)
                 else :
@@ -222,7 +233,7 @@ class ExecStage(PipelineStage):
             if self.instr.regWrite :
                 self.simulator.hazardList.append(self.instr.dest)    
 
-
+            #calculate the offset of the lw and sw instructions
             if  self.instr.op == 'lw':
                 self.instr.source1RegValue = self.instr.source1RegValue + int(self.instr.immed)
             elif  self.instr.op == 'sw':
@@ -232,10 +243,10 @@ class ExecStage(PipelineStage):
                 # Set the other instructions currently in the pipeline to a Nop
                 self.simulator.pipeline[0] = FetchStage(Nop, self)
                 self.simulator.pipeline[2] = ReadStage(Nop, self)
-            #TODO add special cases instead of just an eval (branch jump)
             elif self.instr.op == 'bne':
                 if self.instr.source1RegValue != self.instr.source2RegValue:
-                    # Set the program counter to the target address
+                    # Set the program counter to the target address 
+                    # subtract 8 to account for 2 instructions we have loaded into fetch and read
                     self.simulator.programCounter = self.simulator.programCounter + (int(self.instr.immed) * 4) - 8
                     # Set the other instructions currently in the pipeline to Nops
                     self.simulator.pipeline[0] = FetchStage(Nop, self)
@@ -276,7 +287,7 @@ class DataStage(PipelineStage):
         elif self.instr.readMem:
             self.instr.result = self.simulator.mainmemory[self.instr.source1RegValue]
     def __str__(self):
-        return 'Main Memory\t'
+        return 'Main Memory'
     
 class WriteStage(PipelineStage):
     def advance(self):

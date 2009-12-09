@@ -51,60 +51,62 @@ class Instruction(object):
     
     @property
     def dest(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's destination register """
         return self.values['dest']
     
     @property
     def s1(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's first source register """
         return self.values['s1']
     
     @property
     def s2(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's second source register """
         return self.values['s2']
     
     @property
     def immed(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's immediate value """
         return self.values['immed']
     
     @property
     def target(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's target value """
         return self.values['target']
     
     @property
     def aluop(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's control to decide an alu operation """
         return self.controls['aluop']
     
     @property
     def regRead(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's control to decide to read a register"""
         return self.controls['regRead']
     
     @property
     def regWrite(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's control to decide to write a register """
         return self.controls['regWrite']
     
     @property
     def readMem(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's control to decide to read memory """
         return self.controls['readMem']
     
     @property
     def writeMem(self):
-        """ Get this Instruction's name """
+        """ Get this Instruction's control to decide to write memory """
         return self.controls['writeMem']
     
     
     def __str__(self):
-        str = "%s\t%s, %s, %s" % (self.values['op'],
-                                  self.values['dest'],
-                                  self.values['s1'],
-                                  self.values['s2'] if self.values['s2'] else self.values['immed'])
+        str = "%s\t%s %s %s %s %s" % (self.values['op'],
+                                  self.values['dest'] if self.values['dest'] else "",
+                                  self.values['s1'] if self.values['s1'] else "",
+                                  self.values['s2'] if self.values['s2'] else "",
+                                  self.values['immed'] if self.values['immed'] else "",
+                                  self.values['target'] if self.values['target'] else "")
         return str
     
     def __repr__(self):
